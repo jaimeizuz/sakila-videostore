@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<definitions xmlns="https://www.omg.org/spec/DMN/20230324/MODEL/" xmlns:dmndi="https://www.omg.org/spec/DMN/20230324/DMNDI/" xmlns:dc="http://www.omg.org/spec/DMN/20180521/DC/" xmlns:di="http://www.omg.org/spec/DMN/20180521/DI/" xmlns:kie="https://kie.org/dmn/extensions/1.0" expressionLanguage="https://www.omg.org/spec/DMN/20230324/FEEL/" namespace="sakila-processes" id="_907C50E0-8F58-4667-A55B-8CD664764FEA" name="ServiceTaskProcessValidation">
+  <inputData name="Countries number" id="_420F10E6-C06A-41CF-8EA5-B2AEE1E36213">
+    <variable name="Countries number" id="_19A441DA-C7AE-4A5A-9C2C-BC3BBCDC6B02" typeRef="number" />
+  </inputData>
+  <decision name="Needs validation?" id="_F523995D-3F8B-4F2D-B35A-20E139930279">
+    <variable id="_01118083-09E0-4143-A8F2-78DBE219A348" typeRef="boolean" name="Needs validation?" />
+    <informationRequirement id="_9EB879EF-8A3A-48D5-86F1-FCB54C6CE321">
+      <requiredInput href="#_420F10E6-C06A-41CF-8EA5-B2AEE1E36213" />
+    </informationRequirement>
+    <decisionTable id="_5387CA4A-4BD5-48AB-BBD1-40216E3D7795" typeRef="boolean" hitPolicy="UNIQUE" label="Needs validation?">
+      <input id="_DDFDD852-B557-4A2F-8FA3-401ABDAE6022">
+        <inputExpression id="_A52FA40E-6513-4099-84B6-7DE3F95BA605" typeRef="number">
+          <text>Countries number</text>
+        </inputExpression>
+      </input>
+      <output id="_F30D2C2B-4EF8-4182-AF89-7C6F843685BC" name="Output-1" />
+      <annotation name="Annotations" />
+      <rule id="_27AF1ABB-8987-49F6-BB35-80FAC10F5029">
+        <inputEntry id="_05E80DF3-92B6-47A2-B462-60503BB995ED">
+          <text>200</text>
+        </inputEntry>
+        <outputEntry id="_D137F9DA-DBC9-4783-A351-EC25D461A2DB">
+          <text>true</text>
+        </outputEntry>
+        <annotationEntry>
+          <text>// Your annotations here</text>
+        </annotationEntry>
+      </rule>
+      <rule id="_A2AE8B81-E08F-4AF5-A4DA-84180FF0850B">
+        <inputEntry id="_3B943E93-B905-42D4-9A99-C8BCED95B72F">
+          <text>&lt;=100</text>
+        </inputEntry>
+        <outputEntry id="_3F7314D6-18DE-4C3D-A267-C1EDAFE86F10">
+          <text>false</text>
+        </outputEntry>
+        <annotationEntry>
+          <text></text>
+        </annotationEntry>
+      </rule>
+    </decisionTable>
+  </decision>
+  <dmndi:DMNDI>
+    <dmndi:DMNDiagram id="_88B1B352-E3A2-4EB4-91DC-5045ED3B118F" name="Default DRD" useAlternativeInputDataShape="true">
+      <di:extension>
+        <kie:ComponentsWidthsExtension>
+          <kie:ComponentWidths dmnElementRef="_115A69D0-8E25-452D-9E34-DCCA66E88473">
+            <kie:width>456</kie:width>
+          </kie:ComponentWidths>
+          <kie:ComponentWidths dmnElementRef="_5387CA4A-4BD5-48AB-BBD1-40216E3D7795">
+            <kie:width>60</kie:width>
+            <kie:width>126</kie:width>
+            <kie:width>118</kie:width>
+            <kie:width>240</kie:width>
+          </kie:ComponentWidths>
+        </kie:ComponentsWidthsExtension>
+      </di:extension>
+      <dmndi:DMNShape id="_8A9B0525-DE54-4A8A-856A-E7C6121C7104" dmnElementRef="_420F10E6-C06A-41CF-8EA5-B2AEE1E36213" isCollapsed="false" isListedInputData="false">
+        <dc:Bounds x="440" y="380" width="80" height="100" />
+      </dmndi:DMNShape>
+      <dmndi:DMNShape id="_6DEBAF80-F5A6-4D3F-A6D6-F3E9690DEAAC" dmnElementRef="_F523995D-3F8B-4F2D-B35A-20E139930279" isCollapsed="false" isListedInputData="false">
+        <dc:Bounds x="400" y="200" width="160" height="80" />
+      </dmndi:DMNShape>
+      <dmndi:DMNEdge id="_95544A7D-986D-4CE8-87A9-028793758EBD-AUTO-TARGET" dmnElementRef="_9EB879EF-8A3A-48D5-86F1-FCB54C6CE321" sourceElement="_8A9B0525-DE54-4A8A-856A-E7C6121C7104" targetElement="_6DEBAF80-F5A6-4D3F-A6D6-F3E9690DEAAC">
+        <di:waypoint x="480" y="430" />
+        <di:waypoint x="480" y="240" />
+      </dmndi:DMNEdge>
+    </dmndi:DMNDiagram>
+  </dmndi:DMNDI>
+</definitions>

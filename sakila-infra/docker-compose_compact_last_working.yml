@@ -1,0 +1,226 @@
+services:
+  postgres:
+    container_name: postgres
+    image: 'postgres:16.1-alpine3.19'
+    profiles:
+      - infra
+      - example
+      - full
+      - kogito-database
+    ports:
+      - '5432:5432'
+    volumes:
+      - './sql:/docker-entrypoint-initdb.d:Z'
+    healthcheck:
+      test:
+        - CMD
+        - pg_isready
+        - '-q'
+        - '-d'
+        - kogito
+        - '-U'
+        - kogito-user
+      timeout: 45s
+      interval: 10s
+      retries: 50
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+  mysql-server:
+    container_name: mysql
+    image: jizuzquiza/mysql:8.0.16
+    profiles:
+      - full
+      - business-database
+    environment:
+      MYSQL_ROOT_PASSWORD: password@1
+    volumes:
+      - ./mysql_data:/var/lib/mysql
+    ports:
+    - 3307:3306
+  sakila-videostore-processes-workflows:
+    container_name: sakila-videostore-processes-workflows
+    image: 'jizuzquiza/sakila-videostore-processes-workflows:0.0.1'
+    profiles:
+      - full
+      - workflows
+    ports:
+      - '8080:8080'
+    environment:
+      QUARKUS_HTTP_CORS_ORIGINS: /.*/
+      QUARKUS_DATASOURCE_JDBC_URL: 'jdbc:postgresql://postgres:5432/kogito'
+      QUARKUS_DATASOURCE_REACTIVE_URL: 'postgresql://postgres:5432/kogito'
+      QUARKUS_DATASOURCE_USERNAME: kogito-user
+      QUARKUS_DATASOURCE_PASSWORD: kogito-pass
+      QUARKUS_DATASOURCE_DB_KIND: postgresql
+      KOGITO_JOBS_SERVICE_URL: 'http://localhost:8080'
+      KOGITO_SERVICE_URL: 'http://localhost:8080'
+      KOGITO_DATAINDEX_HTTP_URL: 'http://localhost:8080'
+    depends_on:
+      postgres:
+        condition: service_healthy
+  sakila-videostore-rest-services-server:
+    container_name: sakila-videostore-rest-services-server
+    image: 'jizuzquiza/sakila-videostore-rest-services-server:0.0.1'
+    profiles:
+      - full
+      - business-services
+    ports:
+      - '18081:8080'
+    environment:
+      QUARKUS_HTTP_CORS_ORIGINS: /.*/
+      QUARKUS_DATASOURCE_JDBC_URL: 'jdbc:mysql://mysql-server:3306/sakila'
+      QUARKUS_DATASOURCE_REACTIVE_URL: 'mysql://mysql-server:3306/sakila'
+      QUARKUS_DATASOURCE_USERNAME: sakilauser
+      QUARKUS_DATASOURCE_PASSWORD: Password@1!
+      QUARKUS_DATASOURCE_DB_KIND: mysql
+      QUARKUS_OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: http://opentelemetry-collector:4317
+      QUARKUS_MICROMETER_EXPORT_OTLP_URL: http://opentelemetry-collector:4318
+      QUARKUS_DATASOURCE_JDBC_TELEMETRY: "true"
+      QUARKUS_DATASOURCE_JDBC_TRACING: "true"
+  keycloak:
+    container_name: keycloak
+    image: 'quay.io/keycloak/keycloak:legacy'
+    profiles:
+      - full
+      - kogito-consoles
+    ports:
+      - '8480:8080'
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - './keycloak/kogito-realm.json:/tmp/kogito-realm.json'
+    healthcheck:
+      test:
+        - CMD
+        - curl
+        - '-f'
+        - 'http://localhost:8080/auth/realms/kogito'
+      interval: 2s
+      timeout: 1s
+      retries: 50
+    environment:
+      DB_VENDOR: POSTGRES
+      DB_ADDR: postgres
+      DB_DATABASE: keycloak
+      DB_USER: kogito-user
+      DB_SCHEMA: public
+      DB_PASSWORD: kogito-pass
+      KEYCLOAK_USER: admin
+      KEYCLOAK_PASSWORD: admin
+      KEYCLOAK_IMPORT: /tmp/kogito-realm.json
+  management-console:
+    container_name: management-console
+    image: 'jizuzquiza/incubator-kie-kogito-management-console:999-20240702.020608-20'
+    profiles:
+      - full
+      - kogito-consoles
+    ports:
+      - '8280:8080'
+    depends_on:
+      keycloak:
+        condition: service_healthy
+    volumes:
+      - './svg/:/home/kogito/data/svg/'
+    environment:
+      RUNTIME_TOOLS_MANAGEMENT_CONSOLE_KOGITO_ENV_MODE: PROD
+      RUNTIME_TOOLS_MANAGEMENT_CONSOLE_DATA_INDEX_ENDPOINT: 'http://localhost:8080/graphql'
+      KOGITO_CONSOLES_KEYCLOAK_HEALTH_CHECK_URL: >-
+        http://localhost:8480/auth/realms/kogito/.well-known/openid-configuration
+      KOGITO_CONSOLES_KEYCLOAK_URL: 'http://localhost:8480/auth'
+      KOGITO_CONSOLES_KEYCLOAK_REALM: kogito
+      KOGITO_CONSOLES_KEYCLOAK_CLIENT_ID: kogito-console-quarkus
+  task-console:
+    container_name: task-console
+    image: 'jizuzquiza/incubator-kie-kogito-task-console:999-20240702.020608-20'
+    profiles:
+      - full
+      - kogito-consoles
+    ports:
+      - '8380:8080'
+    depends_on:
+      keycloak:
+        condition: service_healthy
+    environment:
+      RUNTIME_TOOLS_TASK_CONSOLE_KOGITO_ENV_MODE: PROD
+      RUNTIME_TOOLS_TASK_CONSOLE_DATA_INDEX_ENDPOINT: 'http://localhost:8080/graphql'
+      KOGITO_CONSOLES_KEYCLOAK_HEALTH_CHECK_URL: >-
+        http://localhost:8480/auth/realms/kogito/.well-known/openid-configuration
+      KOGITO_CONSOLES_KEYCLOAK_URL: 'http://localhost:8480/auth'
+      KOGITO_CONSOLES_KEYCLOAK_REALM: kogito
+      KOGITO_CONSOLES_KEYCLOAK_CLIENT_ID: kogito-console-quarkus
+  jaeger:
+    container_name: jaeger
+    image: 'jaegertracing/all-in-one:${JAEGER_IMAGE_TAG:-latest}'
+    profiles:
+      - full
+      - monitoring
+    volumes:
+      - './jaeger/jaeger-ui.json:/etc/jaeger/jaeger-ui.json'
+    command: '--query.ui-config /etc/jaeger/jaeger-ui.json'
+    environment:
+      - METRICS_STORAGE_TYPE=prometheus
+      - 'PROMETHEUS_SERVER_URL=http://prometheus:9090'
+      - >-
+        PROMETHEUS_QUERY_SUPPORT_SPANMETRICS_CONNECTOR=${PROMETHEUS_QUERY_SUPPORT_SPANMETRICS_CONNECTOR:-true}
+      - 'PROMETHEUS_QUERY_NAMESPACE=${PROMETHEUS_QUERY_NAMESPACE:-}'
+      - 'PROMETHEUS_QUERY_DURATION_UNIT=${PROMETHEUS_QUERY_DURATION_UNIT:-}'
+      - PROMETHEUS_QUERY_NORMALIZE_CALLS=true
+      - PROMETHEUS_QUERY_NORMALIZE_DURATION=true
+    ports:
+      - '16686:16686'
+      - '14268'
+      - '14269:14269'
+      - '14250'
+  otel_collector:
+    container_name: opentelemetry-collector
+    image: 'otel/opentelemetry-collector-contrib:latest'
+    profiles:
+      - full
+      - monitoring
+    volumes:
+      - >-
+        ./opentelemetry/otel-collector-config.yaml:/etc/otelcol/otel-collector-config.yaml
+    command: '--config=/etc/otelcol/otel-collector-config.yaml'
+    ports:
+      - '13133:13133'
+      - '4317:4317'
+      - '4318:4318'
+      - '15680:55680'
+    depends_on:
+      - jaeger
+  microsim:
+    container_name: microsim
+    image: 'yurishkuro/microsim:0.3.0'
+    profiles:
+      - microsim
+    command: '-j http://otel_collector:14278/api/traces -d 24h -s 500ms'
+    depends_on:
+      - otel_collector
+  prometheus:
+    container_name: prometheus
+    image: 'prom/prometheus:latest'
+    profiles:
+      - full
+      - monitoring
+    volumes:
+      - './prometheus/prometheus.yml:/etc/prometheus/prometheus.yml'
+    ports:
+      - '9090:9090'
+  grafana:
+    container_name: grafana
+    image: 'grafana/grafana:latest'
+    profiles:
+      - full
+      - monitoring
+    volumes:
+      - './grafana/grafana.ini:/etc/grafana/grafana.ini'
+      - >-
+        ./grafana/datasource.yml:/etc/grafana/provisioning/datasources/datasource.yaml
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_AUTH_DISABLE_LOGIN_FORM=true
+    ports:
+      - '3000:3000'

@@ -1,0 +1,4 @@
+{
+  "main": "form-generation-cli-windows.js",
+  "output": "form-generation-cli-windows.blob"
+}
