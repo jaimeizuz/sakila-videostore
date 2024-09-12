@@ -38,6 +38,12 @@ CREATE SCHEMA sakila;
 USE sakila;
 
 --
+-- Sakila user
+--
+CREATE USER 'sakilauser'@'0.0.0.0' IDENTIFIED BY 'Password@1!';
+GRANT ALL PRIVILEGES ON sakila.* TO 'sakilauser'@'0.0.0.0';
+
+--
 -- Table structure for table `actor`
 --
 

@@ -163,7 +163,7 @@ services:
       POSTGRES_PASSWORD: postgres
   mysql-server:
     container_name: mysql
-    image: mysql:8.0.16
+    image: jizuzquiza/mysql:8.0.16
     profiles:
       - full
       - business-database
@@ -207,7 +207,7 @@ services:
       KEYCLOAK_IMPORT: /tmp/kogito-realm.json
   redpanda:
     container_name: redpanda
-    image: vectorized/redpanda:v22.3.4
+    image: redpandadata/redpanda:v24.2.4
     profiles:
       - messaging-redpanda
     ports:
@@ -217,8 +217,9 @@ services:
       - 28082:28082
       - 29092:2909
       - 9093:9093
+      - 9644:9644
     volumes:
-      - ./redpanda:/var/lib/redpanda/data
+      - redpanda_data:/var/lib/redpanda/data
     command:
     - redpanda
     - start
@@ -242,11 +243,70 @@ services:
       interval: 1s
       timeout: 1s
       retries: 50
+  redpanda-console:
+    container_name: redpanda-console
+    image: redpandadata/console:v2.7.2
+    profiles:
+      - messaging-redpanda
+    # mount the local directory that contains your license key to the container.
+    # give Redpanda Console read access to the license.
+    volumes:
+      - ./license:/etc/redpanda:ro
+    entrypoint: /bin/sh
+    command: -c 'echo "$$CONSOLE_CONFIG_FILE" > /tmp/config.yml && echo "$$CONSOLE_ROLEBINDINGS_CONFIG_FILE" > /tmp/role-bindings.yml && /app/console'
+    environment:
+      #REDPANDA_LICENSE_FILEPATH: /etc/redpanda/redpanda.license
+      CONFIG_FILEPATH: /tmp/config.yml
+      CONSOLE_CONFIG_FILE: |
+        kafka:
+          brokers: ["redpanda:9093"]
+          schemaRegistry:
+            enabled: true
+            urls: ["http://redpanda:8081"]
+        redpanda:
+          adminApi:
+            enabled: true
+            urls: ["http://redpanda:9644"]
+        login:
+          enabled: false
+          jwtSecret: change-this-to-something-secret
+          useSecureCookies: false
+          plain:
+            enabled: true
+            credentials:
+            - username: "jdoe"
+              password: "jdoe"
+            - username: "john"
+              password: "some-secret-password"
+        enterprise:
+          rbac:
+            enabled: false
+            roleBindingsFilepath: /tmp/role-bindings.yml
+      CONSOLE_ROLEBINDINGS_CONFIG_FILE: |
+        roleBindings:
+        - metadata:
+            name: Platform Ops
+          subjects:
+            - kind: user
+              provider: Plain
+              name: jdoe
+          roleName: admin
+        - metadata:
+            name: Software Engineers
+          subjects:
+            - kind: user
+              provider: Plain
+              name: john
+          roleName: editor
+    ports:
+      - 9001:8080
+    depends_on:
+      - redpanda
   kafdrop:
     container_name: kafdrop
     image: obsidiandynamics/kafdrop:4.0.2
     profiles:
-      - messaging-redpanda
+      - messaging-redpanda-kafdrop
     depends_on:
       - redpanda
     ports:
@@ -379,3 +439,4 @@ services:
 
 volumes:
     mysql_data: {}
+    redpanda_data: {}
